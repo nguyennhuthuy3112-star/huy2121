@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beam Deflection Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0F3; --panel:#FFFFFF; --ink:#17212B; --muted:#5B6875; --line:#CDD5DD;
+  --steel:#0E6E8C; --load:#D6420F; --ghost:#9AA7B4;
+  --ok:#1F7A4D; --okbg:#E3F3EA; --warn:#8A5300; --warnbg:#FBEFD6; --bad:#B3261E; --badbg:#FBE4E2;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+header{max-width:1220px;margin:0 auto;padding:26px 20px 6px}
+h1{margin:0;font-size:26px;font-weight:600;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:var(--muted)}
+.app{max-width:1220px;margin:0 auto;padding:16px 20px 40px;display:grid;grid-template-columns:350px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.app{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px}
+.panel + .panel{margin-top:20px}
+h2{margin:0 0 12px;font-size:16px;font-weight:600}
+fieldset{border:0;border-top:1px solid var(--line);margin:16px 0 0;padding:14px 0 0}
+fieldset:first-of-type{border-top:0;margin-top:0;padding-top:0}
+legend{padding:0;font-weight:600;font-size:14px;margin-bottom:8px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+.inp{display:flex;align-items:stretch}
+input,select{font:inherit;color:var(--ink);background:#fff;border:1px solid #A9B5C0;border-radius:4px;padding:7px 9px;width:100%;min-width:0}
+.inp input{border-top-right-radius:0;border-bottom-right-radius:0;font-family:var(--mono);font-size:14px}
+.unit{display:flex;align-items:center;padding:0 10px;background:#F3F5F7;border:1px solid #A9B5C0;border-left:0;border-radius:0 4px 4px 0;color:var(--muted);font-size:13px;font-family:var(--mono)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #7FB8CC;outline-offset:1px}
+input.bad{border-color:var(--bad);background:#FFF8F7}
+.err{color:var(--bad);font-size:12.5px;min-height:0;margin-top:2px}
+.err:empty{display:none}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #A9B5C0;border-radius:4px;overflow:hidden}
+.seg input{position:absolute;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none}
+.seg label{margin:0;padding:8px 6px;text-align:center;cursor:pointer;color:var(--ink);font-size:14px;background:#fff}
+.seg label + input + label,.seg input + label + input + label{border-left:1px solid #A9B5C0}
+.seg input:checked + label{background:var(--ink);color:#fff}
+.seg input:focus-visible + label{outline:3px solid #7FB8CC;outline-offset:-3px}
+.matinfo{font-size:13px;color:var(--muted);margin:2px 0 0}
+.note{font-size:12.5px;color:var(--muted);margin:4px 0 0}
+.actions{display:flex;gap:8px;margin-top:16px}
+button{font:inherit;cursor:pointer;border-radius:4px;padding:9px 14px;border:1px solid var(--ink)}
+button.primary{background:var(--ink);color:#fff;flex:1}
+button.ghost{background:#fff;color:var(--ink)}
+.secsvg{display:block;margin:4px auto 10px;max-width:180px}
+.viewhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px}
+.viewhead label{font-size:13.5px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+.viewhead input{width:auto}
+.viz{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:#FAFBFC}
+.viz svg{display:block;min-width:660px;width:100%;height:auto}
+svg text{font-family:var(--sans);font-size:14px;fill:var(--ink)}
+svg .mono{font-family:var(--mono);font-size:13px}
+.s-beam{fill:none;stroke:var(--steel);stroke-width:10;stroke-linejoin:round}
+.s-ghost{stroke:var(--ghost);stroke-width:2;stroke-dasharray:6 5;fill:none}
+.s-thin{stroke:var(--ink);stroke-width:1;fill:none}
+.s-load{stroke:var(--load);stroke-width:3}
+.t-load{fill:var(--load)!important;font-weight:600}
+.s-sup{fill:#E3E8ED;stroke:var(--ink);stroke-width:1.6}
+.vizcap{font-size:13px;color:var(--muted);margin:8px 0 0}
+.banner{padding:12px 14px;border-radius:4px;background:var(--badbg);color:var(--bad);border:1px solid #EBB8B4;font-size:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:1100px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cell{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:#fff}
+.cell .k{font-size:13px;color:var(--muted)}
+.cell .v{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1.25;word-break:break-all}
+.cell .u{font-family:var(--mono);font-size:13px;color:var(--muted);margin-left:4px}
+.cell .n{font-size:12.5px;color:var(--muted);margin-top:2px}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-top:14px}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+td:last-child{font-family:var(--mono);text-align:right}
+th{font-weight:500;color:var(--muted)}
+.safety{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.fos{font-family:var(--mono);font-size:34px;font-weight:500;line-height:1}
+.chip{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13.5px;font-weight:600}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.warn{background:var(--warnbg);color:var(--warn)}
+.chip.bad{background:var(--badbg);color:var(--bad)}
+.warnline{margin-top:12px;padding:9px 12px;border-radius:4px;background:var(--warnbg);color:var(--warn);font-size:13.5px}
+details{margin-top:14px;font-size:14px}
+summary{cursor:pointer;font-weight:600}
+details pre{background:#F3F5F7;padding:10px 12px;border-radius:4px;font-family:var(--mono);font-size:12.5px;overflow-x:auto;margin:8px 0 0;white-space:pre-wrap}
+.viz:has(> div:empty){display:none}
+.charts svg + svg{border-top:1px solid var(--line)}
+.ax{stroke:#5B6875;stroke-width:1}
+.grid{stroke:#E1E6EB;stroke-width:1}
+.zero{stroke:#17212B;stroke-width:1.4}
+.curve{fill:none;stroke-width:2.6;stroke-linejoin:round}
+.area{opacity:.13}
+.ctitle{font-weight:600;font-size:15px}
+.tick{font-family:var(--mono);font-size:12px;fill:#5B6875}
+footer{max-width:1220px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Beam Deflection Calculator</h1>
+  <p>Euler–Bernoulli beam with one point load. Units: mm, N, MPa.</p>
+</header>
+ 
+<main class="app">
+  <!-- ============ INPUTS ============ -->
+  <section class="panel" aria-label="Inputs">
+    <form id="form" novalidate onsubmit="return false">
+      <fieldset>
+        <legend>Beam type</legend>
+        <div class="seg" role="radiogroup" aria-label="Beam type">
+          <input type="radio" name="beam" id="beam_ss" value="ss" checked><label for="beam_ss">Simply supported</label>
+          <input type="radio" name="beam" id="beam_ct" value="ct"><label for="beam_ct">Cantilever</label>
+        </div>
+        <p class="note" id="beamNote"></p>
+      </fieldset>
+ 
+      <fieldset>
+        <legend>Point load and geometry</legend>
+        <div class="field"><label for="L">Beam length L</label><div class="inp"><input id="L" type="number" inputmode="decimal" step="any" value="1000"><span class="unit">mm</span></div><div class="err" id="L_err"></div></div>
+        <div class="row2">
+          <div class="field"><label for="P">Load P</label><div class="inp"><input id="P" type="number" inputmode="decimal" step="any" value="5000"><span class="unit">N</span></div><div class="err" id="P_err"></div></div>
+          <div class="field"><label for="a">Position a</label><div class="inp"><input id="a" type="number" inputmode="decimal" step="any" value="600"><span class="unit">mm</span></div><div class="err" id="a_err"></div></div>
+        </div>
+        <p class="note">a is measured from the left end (the fixed end for a cantilever).</p>
+      </fieldset>
+ 
+      <fieldset>
+        <legend>Cross section</legend>
+        <div class="field"><label for="secType">Shape</label>
+          <select id="secType">
+            <option value="rect">Rectangle</option>
+            <option value="circle">Solid circle</option>
+            <option value="tube">Hollow tube</option>
+            <option value="ibeam">I-beam</option>
+          </select>
+        </div>
+        <div id="secSvg"></div>
+        <div id="secFields"></div>
+      </fieldset>
+ 
+      <fieldset>
+        <legend>Material</legend>
+        <div class="field"><label for="mat">Material</label>
+          <select id="mat">
+            <option value="steel">Structural steel (A36)</option>
+            <option value="alu">Aluminum 6061-T6</option>
+            <option value="ti">Titanium Ti-6Al-4V</option>
+            <option value="wood">Wood (Douglas fir)</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div id="customMat" hidden>
+          <div class="row2">
+            <div class="field"><label for="cE">Modulus E</label><div class="inp"><input id="cE" type="number" inputmode="decimal" step="any" value="200000"><span class="unit">MPa</span></div><div class="err" id="cE_err"></div></div>
+            <div class="field"><label for="cSy">Yield σy</label><div class="inp"><input id="cSy" type="number" inputmode="decimal" step="any" value="250"><span class="unit">MPa</span></div><div class="err" id="cSy_err"></div></div>
+          </div>
+        </div>
+        <p class="matinfo" id="matInfo"></p>
+      </fieldset>
+ 
+      <fieldset>
+        <legend>Safety check</legend>
+        <div class="field"><label for="fosReq">Required safety factor</label><div class="inp"><input id="fosReq" type="number" inputmode="decimal" step="any" value="1.5"><span class="unit">–</span></div><div class="err" id="fosReq_err"></div></div>
+      </fieldset>
+ 
+      <div class="actions">
+        <button type="button" class="primary" id="calc">Calculate</button>
+        <button type="button" class="ghost" id="reset">Reset</button>
+      </div>
+    </form>
+  </section>
+ 
+  <!-- ============ OUTPUT ============ -->
+  <div>
+    <section class="panel" aria-label="Beam diagram">
+      <div class="viewhead">
+        <h2 style="margin:0">Supports, load and deformed shape</h2>
+        <label><input type="checkbox" id="trueScale"> Draw deflection at true scale</label>
+      </div>
+      <div class="viz"><div id="viz"></div></div>
+      <p class="vizcap" id="vizCap"></p>
+    </section>
+ 
+    <section class="panel" aria-label="Shear, moment and deflection diagrams">
+      <h2>Shear force, bending moment and deflection along the beam</h2>
+      <div class="viz charts"><div id="charts"></div></div>
+      <p class="vizcap" id="chartCap"></p>
+    </section>
+ 
+    <section class="panel" aria-label="Results" aria-live="polite">
+      <h2>Results</h2>
+      <div id="results"></div>
+    </section>
+ 
+    <section class="panel" aria-label="Safety check">
+      <h2>Safety check</h2>
+      <div id="safety"></div>
+    </section>
+  </div>
+</main>
+ 
+<footer>
+  Assumptions: linear elastic material, prismatic beam, small deflections, self-weight ignored.
+  Positive deflection is downward. Stress is the bending stress at the extreme fibre, σ = M·c / I.
+</footer>
+ 
+<script>
+/* CALC-START ------------------------------------------------------------ */
+const MATERIALS = {
+  steel:  { name: 'Structural steel (A36)', E: 200000, sy: 250, note: 'E = 200 GPa, yield = 250 MPa' },
+  alu:    { name: 'Aluminum 6061-T6',       E: 68900,  sy: 276, note: 'E = 68.9 GPa, yield = 276 MPa' },
+  ti:     { name: 'Titanium Ti-6Al-4V',     E: 113800, sy: 880, note: 'E = 113.8 GPa, yield = 880 MPa' },
+  wood:   { name: 'Wood (Douglas fir)',     E: 12400,  sy: 50,  note: 'E = 12.4 GPa, bending strength 50 MPa used as yield (approximate, varies by grade)' }
+};
+ 
+const SECTIONS = {
+  rect:   { label: 'Rectangle',   fields: [['b', 'Width b', 50], ['h', 'Height h', 100]] },
+  circle: { label: 'Solid circle', fields: [['d', 'Diameter d', 50]] },
+  tube:   { label: 'Hollow tube', fields: [['D', 'Outer diameter D', 60], ['di', 'Inner diameter d', 50]] },
+  ibeam:  { label: 'I-beam',      fields: [['B', 'Flange width B', 100], ['H', 'Total height H', 200], ['tf', 'Flange thickness tf', 8], ['tw', 'Web thickness tw', 5.6]] }
+};
+ 
+/* Second moment of area I (mm^4) and extreme-fibre distance c (mm). */
+function sectionProps(type, v) {
+  switch (type) {
+    case 'rect':   return { I: v.b * Math.pow(v.h, 3) / 12, c: v.h / 2 };
+    case 'circle': return { I: Math.PI * Math.pow(v.d, 4) / 64, c: v.d / 2 };
+    case 'tube':   return { I: Math.PI * (Math.pow(v.D, 4) - Math.pow(v.di, 4)) / 64, c: v.D / 2 };
+    case 'ibeam':  return { I: (v.B * Math.pow(v.H, 3) - (v.B - v.tw) * Math.pow(v.H - 2 * v.tf, 3)) / 12, c: v.H / 2 };
+  }
+}
+ 
+/* Point load P at distance a from the left end. Deflection v(x) is positive downward. */
+function analyze(beam, L, P, a, E, I, c) {
+  const EI = E * I, b = L - a;
+  let r = {};
+  if (beam === 'ct') {
+    r.Mmax = P * a; r.xM = 0;
+    r.xd = L;
+    r.defl = x => x <= a ? P * x * x * (3 * a - x) / (6 * EI)
+                         : P * a * a * (3 * x - a) / (6 * EI);
+    r.dmax = P * a * a * (3 * L - a) / (6 * EI);
+    r.reactions = [['Fixed-end shear V', P, 'N'], ['Fixed-end moment M', P * a / 1000, 'N·m']];
+    /* Sign convention: sagging moment positive, dM/dx = V. Moment in N·mm. */
+    r.Vpts = [[0, P], [a, P], [a, 0], [L, 0]];
+    r.Mpts = [[0, -P * a], [a, 0], [L, 0]];
+    r.Vmark = { x: a / 2, y: P };
+  } else {
+    r.Mmax = P * a * b / L; r.xM = a;
+    r.xd = a >= L / 2 ? Math.sqrt((L * L - b * b) / 3) : L - Math.sqrt((L * L - a * a) / 3);
+    r.defl = x => x <= a
+      ? P * b * x * (L * L - b * b - x * x) / (6 * EI * L)
+      : P * a * (L - x) * (L * L - a * a - (L - x) * (L - x)) / (6 * EI * L);
+    r.dmax = r.defl(r.xd);
+    r.reactions = [['Reaction R_A (left)', P * b / L, 'N'], ['Reaction R_B (right)', P * a / L, 'N']];
+    const RA = P * b / L, RB = P * a / L;
+    r.Vpts = [[0, RA], [a, RA], [a, -RB], [L, -RB]];
+    r.Mpts = [[0, 0], [a, RA * a], [L, 0]];
+    r.Vmark = RA >= RB ? { x: a / 2, y: RA } : { x: (a + L) / 2, y: -RB };
+  }
+  r.Vmax = Math.abs(r.Vmark.y);
+  r.sigma = r.Mmax * c / I;      // MPa (N/mm^2)
+  r.eps = r.sigma / E;           // dimensionless
+  r.EI = EI; r.I = I; r.c = c; r.Z = I / c;
+  return r;
+}
+/* CALC-END -------------------------------------------------------------- */
+ 
+const $ = id => document.getElementById(id);
+const DEFAULTS = { beam: 'ss', L: 1000, P: 5000, a: 600, sec: 'rect', mat: 'steel', fosReq: 1.5 };
+let prevSec = 'rect';
+const secMemory = {};
+ 
+function fmt(v) {
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  if (a < 1e-3 || a >= 1e7) return v.toExponential(3).replace('e+', 'e');
+  return v.toLocaleString('en-US', { maximumSignificantDigits: 4 });
+}
+ 
+/* ---------- section fields ---------- */
+function buildSectionFields() {
+  const type = $('secType').value;
+  const mem = secMemory[type] || {};
+  $('secFields').innerHTML = '<div class="row2">' + SECTIONS[type].fields.map(([k, label, def]) => {
+    const val = mem[k] !== undefined ? mem[k] : def;
+    return `<div class="field"><label for="sec_${k}">${label}</label><div class="inp"><input id="sec_${k}" type="number" inputmode="decimal" step="any" value="${val}"><span class="unit">mm</span></div><div class="err" id="sec_${k}_err"></div></div>`;
+  }).join('') + '</div>';
+  SECTIONS[type].fields.forEach(([k]) => $('sec_' + k).addEventListener('input', compute));
+}
+function rememberSection() {
+  const mem = {};
+  SECTIONS[prevSec].fields.forEach(([k]) => { const el = $('sec_' + k); if (el) mem[k] = el.value; });
+  secMemory[prevSec] = mem;
+}
+ 
+/* ---------- validation ---------- */
+function readInputs() {
+  const errs = {};
+  function num(id, label) {
+    const el = $(id); const s = el.value.trim();
+    if (s === '') { errs[id] = 'Enter a value.'; return NaN; }
+    const n = Number(s);
+    if (!isFinite(n)) { errs[id] = 'Enter a valid number.'; return NaN; }
+    if (n <= 0) { errs[id] = label + ' must be greater than 0.'; return NaN; }
+    return n;
+  }
+  const beam = document.querySelector('input[name="beam"]:checked').value;
+  const L = num('L', 'Length'), P = num('P', 'Load'), a = num('a', 'Position');
+  if (!isNaN(L) && !isNaN(a)) {
+    if (beam === 'ss' && a >= L) errs.a = 'For a simply supported beam, a must be less than L (' + fmt(L) + ' mm).';
+    if (beam === 'ct' && a > L) errs.a = 'a cannot be larger than L (' + fmt(L) + ' mm).';
+  }
+  const type = $('secType').value, sv = {};
+  SECTIONS[type].fields.forEach(([k, label]) => { sv[k] = num('sec_' + k, label); });
+  const ok = k => !isNaN(sv[k]);
+  if (type === 'tube' && ok('D') && ok('di') && sv.di >= sv.D) errs.sec_di = 'Inner diameter must be smaller than the outer diameter.';
+  if (type === 'ibeam') {
+    if (ok('tw') && ok('B') && sv.tw >= sv.B) errs.sec_tw = 'Web thickness must be smaller than the flange width.';
+    if (ok('tf') && ok('H') && 2 * sv.tf >= sv.H) errs.sec_tf = 'Two flanges must be thinner than the total height.';
+  }
+  const mat = $('mat').value; let E, sy;
+  if (mat === 'custom') { E = num('cE', 'Modulus'); sy = num('cSy', 'Yield strength'); }
+  else { E = MATERIALS[mat].E; sy = MATERIALS[mat].sy; }
+  const fosReq = num('fosReq', 'Safety factor');
+  if (!isNaN(fosReq) && fosReq < 1) errs.fosReq = 'Required safety factor should be at least 1.';
+  return { errs, beam, L, P, a, type, sv, mat, E, sy, fosReq };
+}
+ 
+function showErrors(errs) {
+  document.querySelectorAll('.err').forEach(e => e.textContent = '');
+  document.querySelectorAll('input.bad').forEach(e => e.classList.remove('bad'));
+  Object.keys(errs).forEach(id => {
+    const e = $(id + '_err'); if (e) e.textContent = errs[id];
+    const i = $(id); if (i) { i.classList.add('bad'); }
+  });
+}
+ 
+/* ---------- drawing ---------- */
+function drawSection(type, v) {
+  const W = 180, H = 120, cx = W / 2, cy = H / 2;
+  const good = Object.values(v).every(x => isFinite(x) && x > 0);
+  if (!good) return '';
+  let body = '', half = 0;
+  const fill = 'fill="#0E6E8C"';
+  if (type === 'rect') {
+    const s = 90 / Math.max(v.b, v.h), w = v.b * s, h = v.h * s; half = h / 2;
+    body = `<rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" ${fill}/>`;
+  } else if (type === 'circle') {
+    const s = 90 / v.d, d = v.d * s; half = d / 2;
+    body = `<circle cx="${cx}" cy="${cy}" r="${d / 2}" ${fill}/>`;
+  } else if (type === 'tube') {
+    if (v.di >= v.D) return '';
+    const s = 90 / v.D, D = v.D * s, di = v.di * s; half = D / 2;
+    body = `<circle cx="${cx}" cy="${cy}" r="${D / 2}" ${fill}/><circle cx="${cx}" cy="${cy}" r="${di / 2}" fill="#fff"/>`;
+  } else if (type === 'ibeam') {
+    if (v.tw >= v.B || 2 * v.tf >= v.H) return '';
+    const s = 96 / Math.max(v.B, v.H), B = v.B * s, Ht = v.H * s, tf = v.tf * s, tw = v.tw * s; half = Ht / 2;
+    body = `<rect x="${cx - B / 2}" y="${cy - Ht / 2}" width="${B}" height="${tf}" ${fill}/>` +
+           `<rect x="${cx - B / 2}" y="${cy + Ht / 2 - tf}" width="${B}" height="${tf}" ${fill}/>` +
+           `<rect x="${cx - tw / 2}" y="${cy - Ht / 2}" width="${tw}" height="${Ht}" ${fill}/>`;
+  }
+  return `<svg class="secsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cross section sketch">${body}
+    <line x1="10" y1="${cy}" x2="${W - 10}" y2="${cy}" stroke="#D6420F" stroke-width="1.2" stroke-dasharray="5 4"/>
+    <text x="${W - 10}" y="${cy - 5}" text-anchor="end" style="font-size:11px;fill:#D6420F">neutral axis</text></svg>`;
+}
+ 
+function drawBeam(inp, r) {
+  const X0 = 100, X1 = 800, Y0 = 130, W = X1 - X0, sx = W / inp.L;
+  const trueScale = $('trueScale').checked;
+  const k = trueScale ? sx : 0.14 * W / Math.abs(r.dmax);
+  const exag = k / sx;
+  const pts = [];
+  for (let i = 0; i <= 160; i++) { const x = inp.L * i / 160; pts.push((X0 + x * sx).toFixed(1) + ',' + (Y0 + r.defl(x) * k).toFixed(1)); }
+  const xa = X0 + inp.a * sx, ya = Y0 + r.defl(inp.a) * k;
+  const xd = X0 + r.xd * sx, yd = Y0 + r.dmax * k;
+  const dimL = 318, dimA = 290;
+ 
+  let supports = '';
+  if (inp.beam === 'ct') {
+    supports = `<rect x="${X0 - 18}" y="${Y0 - 50}" width="18" height="100" fill="url(#hatch)" stroke="#17212B" stroke-width="1.6"/>`;
+  } else {
+    supports = `
+      <polygon class="s-sup" points="${X0},${Y0 + 6} ${X0 - 17},${Y0 + 36} ${X0 + 17},${Y0 + 36}"/>
+      <line class="s-thin" x1="${X0 - 28}" y1="${Y0 + 36}" x2="${X0 + 28}" y2="${Y0 + 36}"/>
+      <polygon class="s-sup" points="${X1},${Y0 + 6} ${X1 - 17},${Y0 + 32} ${X1 + 17},${Y0 + 32}"/>
+      <circle class="s-sup" cx="${X1 - 9}" cy="${Y0 + 37}" r="4.5"/><circle class="s-sup" cx="${X1 + 9}" cy="${Y0 + 37}" r="4.5"/>
+      <line class="s-thin" x1="${X1 - 28}" y1="${Y0 + 42}" x2="${X1 + 28}" y2="${Y0 + 42}"/>`;
+  }
+  const anchor = xd > X1 - 130 ? 'end' : (xd < X0 + 130 ? 'start' : 'middle');
+  const dLabel = `δmax = ${fmt(r.dmax)} mm at x = ${fmt(r.xd)} mm`;
+  const aMid = (X0 + xa) / 2, aAnch = (xa - X0) < 110 ? 'start' : 'middle', aX = aAnch === 'start' ? X0 : aMid;
+ 
+  const svg = `<svg viewBox="0 0 900 345" role="img" aria-label="Beam with supports, point load and deformed shape">
+    <defs>
+      <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#E3E8ED"/><line x1="0" y1="0" x2="0" y2="8" stroke="#17212B" stroke-width="1.4"/></pattern>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#D6420F"/></marker>
+    </defs>
+    <line class="s-ghost" x1="${X0}" y1="${Y0}" x2="${X1}" y2="${Y0}"/>
+    ${supports}
+    <polyline class="s-beam" points="${pts.join(' ')}"/>
+    <line x1="${xd}" y1="${Y0}" x2="${xd}" y2="${yd}" stroke="#17212B" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <circle cx="${xd}" cy="${yd}" r="5" fill="#fff" stroke="#17212B" stroke-width="1.6"/>
+    <text class="mono" x="${xd}" y="${yd + 30}" text-anchor="${anchor}">${dLabel}</text>
+    <line class="s-load" x1="${xa}" y1="${ya - 82}" x2="${xa}" y2="${ya - 7}" marker-end="url(#ah)"/>
+    <text class="t-load mono" x="${xa}" y="${ya - 90}" text-anchor="middle" style="stroke:#FAFBFC;stroke-width:5px;paint-order:stroke">P = ${fmt(inp.P)} N</text>
+    <line class="s-ghost" style="stroke-width:1" x1="${X0 + inp.a * sx}" y1="${Y0 + 12}" x2="${X0 + inp.a * sx}" y2="${dimA}"/>
+    <line class="s-thin" x1="${X0}" y1="${dimA}" x2="${X0 + inp.a * sx}" y2="${dimA}"/>
+    <line class="s-thin" x1="${X0}" y1="${dimA - 5}" x2="${X0}" y2="${dimA + 5}"/><line class="s-thin" x1="${X0 + inp.a * sx}" y1="${dimA - 5}" x2="${X0 + inp.a * sx}" y2="${dimA + 5}"/>
+    <text class="mono" x="${aX}" y="${dimA - 8}" text-anchor="${aAnch}">a = ${fmt(inp.a)} mm</text>
+    <line class="s-thin" x1="${X0}" y1="${dimL}" x2="${X1}" y2="${dimL}"/>
+    <line class="s-thin" x1="${X0}" y1="${dimL - 5}" x2="${X0}" y2="${dimL + 5}"/><line class="s-thin" x1="${X1}" y1="${dimL - 5}" x2="${X1}" y2="${dimL + 5}"/>
+    <text class="mono" x="${(X0 + X1) / 2}" y="${dimL - 8}" text-anchor="middle">L = ${fmt(inp.L)} mm</text>
+  </svg>`;
+  const cap = trueScale
+    ? 'Deflection is drawn at true scale. It may be too small to see.'
+    : `Dashed grey line: undeformed beam. Deflection is exaggerated ×${fmt(exag)} so it is visible; beam thickness is not to scale.`;
+  return { svg, cap };
+}
+ 
+/* ---------- line charts: V(x), M(x), v(x) ---------- */
+function niceStep(range, n) {
+  const raw = range / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+}
+ 
+/* o: { title, yLabel, pts:[[x,y]...], L, a, color, invert, mark:{x,y,text} } */
+function chartSVG(o) {
+  const W = 900, H = 220, ml = 82, mr = 26, mt = 38, mb = 38, pw = W - ml - mr, ph = H - mt - mb;
+  const ys = o.pts.map(p => p[1]);
+  let ymin = Math.min(0, ...ys), ymax = Math.max(0, ...ys);
+  if (ymax - ymin === 0) ymax = 1;
+  const pad = (ymax - ymin) * 0.16;
+  if (ymax > 0) ymax += pad;
+  if (ymin < 0) ymin -= pad;
+  const X = x => ml + x / o.L * pw;
+  const Y = y => o.invert ? mt + (y - ymin) / (ymax - ymin) * ph : mt + (ymax - y) / (ymax - ymin) * ph;
+ 
+  let g = '';
+  const ys_ = niceStep(ymax - ymin, 4);
+  for (let t = Math.ceil(ymin / ys_ - 1e-9) * ys_; t <= ymax + 1e-9; t += ys_) {
+    const v = Math.abs(t) < ys_ * 1e-6 ? 0 : t;
+    g += `<line class="grid" x1="${ml}" y1="${Y(v)}" x2="${W - mr}" y2="${Y(v)}"/><text class="tick" x="${ml - 8}" y="${Y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  const xs_ = niceStep(o.L, 6);
+  for (let t = 0; t <= o.L * (1 + 1e-9); t += xs_) {
+    g += `<line class="ax" x1="${X(t)}" y1="${mt + ph}" x2="${X(t)}" y2="${mt + ph + 5}"/><text class="tick" x="${X(t)}" y="${mt + ph + 19}" text-anchor="middle">${fmt(t)}</text>`;
+  }
+  const line = o.pts.map(p => X(p[0]).toFixed(1) + ',' + Y(p[1]).toFixed(1)).join(' ');
+  const first = o.pts[0], last = o.pts[o.pts.length - 1];
+  const area = line + ` ${X(last[0]).toFixed(1)},${Y(0)} ${X(first[0]).toFixed(1)},${Y(0)}`;
+ 
+  const m = o.mark, mx = X(m.x), my = Y(m.y);
+  const anchor = mx > W - 230 ? 'end' : (mx < ml + 130 ? 'start' : 'middle');
+  const tx = anchor === 'end' ? mx - 8 : (anchor === 'start' ? mx + 8 : mx);
+  const ty = o.invert ? my + 24 : (m.y >= 0 ? my - 12 : my + 22);
+ 
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.title}">
+    ${g}
+    <line class="ax" x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}"/>
+    <line class="zero" x1="${ml}" y1="${Y(0)}" x2="${W - mr}" y2="${Y(0)}"/>
+    <line x1="${X(o.a)}" y1="${mt}" x2="${X(o.a)}" y2="${mt + ph}" stroke="#D6420F" stroke-width="1.2" stroke-dasharray="4 4"/>
+    <polygon class="area" points="${area}" fill="${o.color}"/>
+    <polyline class="curve" points="${line}" stroke="${o.color}"/>
+    <circle cx="${mx}" cy="${my}" r="5" fill="#fff" stroke="#17212B" stroke-width="1.6"/>
+    <text class="mono" x="${tx}" y="${ty}" text-anchor="${anchor}" style="stroke:#FAFBFC;stroke-width:5px;paint-order:stroke">${m.text}</text>
+    <text class="ctitle" x="${ml}" y="20">${o.title}</text>
+    <text x="${W - mr}" y="${H - 6}" text-anchor="end" style="font-size:12.5px;fill:#5B6875">x (mm)</text>
+    <text transform="rotate(-90 15 ${mt + ph / 2})" x="15" y="${mt + ph / 2}" text-anchor="middle" style="font-size:12.5px;fill:#5B6875">${o.yLabel}</text>
+  </svg>`;
+}
+ 
+function drawCharts(inp, r) {
+  const dpts = [];
+  for (let i = 0; i <= 200; i++) { const x = inp.L * i / 200; dpts.push([x, r.defl(x)]); }
+  const mAt = r.Mpts.reduce((best, p) => Math.abs(p[1]) > Math.abs(best[1]) ? p : best);
+  return chartSVG({
+      title: 'Shear force V(x)', yLabel: 'V (N)', pts: r.Vpts, L: inp.L, a: inp.a, color: '#4A5D70',
+      mark: { x: r.Vmark.x, y: r.Vmark.y, text: '|V|max = ' + fmt(r.Vmax) + ' N' }
+    }) +
+    chartSVG({
+      title: 'Bending moment M(x)', yLabel: 'M (N·m)', pts: r.Mpts.map(p => [p[0], p[1] / 1000]), L: inp.L, a: inp.a, color: '#6A3E9E',
+      mark: { x: mAt[0], y: mAt[1] / 1000, text: 'M = ' + fmt(mAt[1] / 1000) + ' N·m at x = ' + fmt(mAt[0]) + ' mm' }
+    }) +
+    chartSVG({
+      title: 'Deflection v(x), positive downward', yLabel: 'v (mm)', pts: dpts, L: inp.L, a: inp.a, color: '#0E6E8C', invert: true,
+      mark: { x: r.xd, y: r.dmax, text: 'δmax = ' + fmt(r.dmax) + ' mm at x = ' + fmt(r.xd) + ' mm' }
+    });
+}
+ 
+/* ---------- output ---------- */
+function cell(k, v, u, n) {
+  return `<div class="cell"><div class="k">${k}</div><div class="v">${v}<span class="u">${u}</span></div><div class="n">${n}</div></div>`;
+}
+ 
+function render(inp, r, props) {
+  $('results').innerHTML =
+    `<div class="grid4">
+      ${cell('Maximum moment', fmt(r.Mmax / 1000), 'N·m', 'at x = ' + fmt(r.xM) + ' mm')}
+      ${cell('Maximum stress', fmt(r.sigma), 'MPa', 'extreme fibre, σ = M·c / I')}
+      ${cell('Maximum strain', fmt(r.eps * 1e6), 'µε', '= ' + fmt(r.eps * 100) + ' %, ε = σ / E')}
+      ${cell('Maximum deflection', fmt(r.dmax), 'mm', 'at x = ' + fmt(r.xd) + ' mm')}
+    </div>
+    <table>
+      <tr><th colspan="2">Supports</th></tr>
+      ${r.reactions.map(x => `<tr><td>${x[0]}</td><td>${fmt(x[1])} ${x[2]}</td></tr>`).join('')}
+      <tr><td>Maximum shear force |V|max</td><td>${fmt(r.Vmax)} N</td></tr>
+      <tr><th colspan="2">Section and material</th></tr>
+      <tr><td>Second moment of area I</td><td>${fmt(r.I)} mm⁴</td></tr>
+      <tr><td>Distance to extreme fibre c</td><td>${fmt(r.c)} mm</td></tr>
+      <tr><td>Section modulus Z = I / c</td><td>${fmt(r.Z)} mm³</td></tr>
+      <tr><td>Modulus E</td><td>${fmt(inp.E)} MPa</td></tr>
+      <tr><td>Flexural rigidity EI</td><td>${fmt(r.EI)} N·mm²</td></tr>
+    </table>
+    <details><summary>Formulas used</summary><pre>${formulaText(inp)}</pre></details>
+    ${Math.abs(r.dmax) > inp.L / 10 ? '<div class="warnline">Deflection is larger than L/10. Small-deflection beam theory is no longer accurate, so treat these values as rough estimates.</div>' : ''}`;
+ 
+  const fos = inp.sy / r.sigma;
+  let cls, label;
+  if (fos < 1) { cls = 'bad'; label = 'Yields under this load'; }
+  else if (fos < inp.fosReq) { cls = 'warn'; label = 'Below required safety factor'; }
+  else { cls = 'ok'; label = 'Meets required safety factor'; }
+  const Py = inp.P * fos;
+  $('safety').innerHTML =
+    `<div class="safety">
+      <div><div class="fos">${fmt(fos)}</div><div class="note">safety factor = σy / σmax</div></div>
+      <div><span class="chip ${cls}">${label}</span><div class="note">Required: ${fmt(inp.fosReq)}. Yield strength: ${fmt(inp.sy)} MPa.</div></div>
+      <div><div class="fos" style="font-size:22px">${fmt(Py)} N</div><div class="note">load at which the extreme fibre reaches yield</div></div>
+    </div>`;
+}
+ 
+function formulaText(inp) {
+  if (inp.beam === 'ct') return `Cantilever, load P at distance a from the fixed end
+M_max = P·a  (at the fixed end)
+δ(x) = P·x²·(3a − x) / (6EI)      for x ≤ a
+δ(x) = P·a²·(3x − a) / (6EI)      for x ≥ a
+δ_max = P·a²·(3L − a) / (6EI)     at x = L (free end)
+V(x) = P for x < a, 0 for x > a;   M(x) = −P·(a − x) for x ≤ a, 0 for x ≥ a   (sagging positive)
+σ_max = M_max·c / I,   ε_max = σ_max / E`;
+  return `Simply supported, load P at distance a from the left support, b = L − a
+R_A = P·b / L,   R_B = P·a / L
+M_max = P·a·b / L  (under the load)
+δ(x) = P·b·x·(L² − b² − x²) / (6EIL)   for x ≤ a
+If a ≥ L/2:  x = √((L² − b²) / 3),  δ_max = P·b·(L² − b²)^(3/2) / (9√3·EIL)
+If a < L/2:  same formula mirrored from the right support
+V(x) = R_A for x < a, −R_B for x > a
+M(x) = R_A·x for x ≤ a, R_B·(L − x) for x ≥ a
+σ_max = M_max·c / I,   ε_max = σ_max / E`;
+}
+ 
+function updateStatic() {
+  const beam = document.querySelector('input[name="beam"]:checked').value;
+  $('beamNote').textContent = beam === 'ss'
+    ? 'Pin support at the left end, roller support at the right end.'
+    : 'Fixed at the left end, free at the right end.';
+  const mat = $('mat').value;
+  $('customMat').hidden = mat !== 'custom';
+  $('matInfo').textContent = mat === 'custom' ? 'Enter E and yield strength in MPa.' : MATERIALS[mat].note;
+}
+ 
+function compute() {
+  updateStatic();
+  const inp = readInputs();
+  showErrors(inp.errs);
+  $('secSvg').innerHTML = drawSection(inp.type, inp.sv);
+  if (Object.keys(inp.errs).length) {
+    const msg = '<div class="banner">Some inputs need attention. Fix the highlighted fields to see results.</div>';
+    $('viz').innerHTML = ''; $('vizCap').textContent = '';
+    $('charts').innerHTML = ''; $('chartCap').textContent = '';
+    $('results').innerHTML = msg; $('safety').innerHTML = msg;
+    return;
+  }
+  const props = sectionProps(inp.type, inp.sv);
+  const r = analyze(inp.beam, inp.L, inp.P, inp.a, inp.E, props.I, props.c);
+  const d = drawBeam(inp, r);
+  $('viz').innerHTML = d.svg; $('vizCap').textContent = d.cap;
+  $('charts').innerHTML = drawCharts(inp, r);
+  $('chartCap').textContent = 'Sign convention: positive moment means sagging (compression on top), so a cantilever shows negative moment. The red dashed line marks the load position.';
+  render(inp, r, props);
+}
+ 
+function resetAll() {
+  $('beam_ss').checked = true;
+  $('L').value = DEFAULTS.L; $('P').value = DEFAULTS.P; $('a').value = DEFAULTS.a;
+  Object.keys(secMemory).forEach(k => delete secMemory[k]);
+  $('secType').value = DEFAULTS.sec; prevSec = DEFAULTS.sec; buildSectionFields();
+  $('mat').value = DEFAULTS.mat; $('cE').value = 200000; $('cSy').value = 250;
+  $('fosReq').value = DEFAULTS.fosReq; $('trueScale').checked = false;
+  compute();
+}
+ 
+['L', 'P', 'a', 'cE', 'cSy', 'fosReq'].forEach(id => $(id).addEventListener('input', compute));
+document.querySelectorAll('input[name="beam"]').forEach(e => e.addEventListener('change', compute));
+$('mat').addEventListener('change', compute);
+$('trueScale').addEventListener('change', compute);
+$('secType').addEventListener('change', () => { rememberSection(); prevSec = $('secType').value; buildSectionFields(); compute(); });
+$('calc').addEventListener('click', compute);
+$('reset').addEventListener('click', resetAll);
+ 
+buildSectionFields();
+compute();
+</script>
+</body>
+</html>
